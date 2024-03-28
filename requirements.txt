@@ -1,0 +1,12 @@
+streamlit
+pymongo
+bcrypt
+openai
+python-dotenv~=1.0.1
+genai
+google-generativeai
+google-generativeai==0.3.2
+flask
+requests
+vertexai
+gunicorn

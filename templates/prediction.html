@@ -1,0 +1,238 @@
+<!-- prediction.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horoscope Prediction</title>
+    <!-- CSS styles -->
+    <style>
+        body {
+            background-image: url('/static/photo1.jpg');
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+            width: 80%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: space-between; /* Keep the containers side by side */
+        }
+        .horoscope-container, .gemini-container {
+            width: 48%;
+        }
+        input[type="text"],
+        input[type="submit"] {
+            width: calc(100% - 20px);
+            margin: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            box-sizing: border-box;
+        }
+        input[type="submit"] {
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+        }
+        .chat-box {
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin-top: 20px;
+        }
+        #voice-btn {
+            margin-top: 10px;
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .feedback-box {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="horoscope-container">
+            <h1 style="margin-top: 0;">Horoscope Prediction</h1>
+            <form id="horoscope-form">
+                <input type="text" id="birth-date" placeholder="Birth Date (YYYY-MM-DD)" required><br>
+                <input type="text" id="birth-time" placeholder="Birth Time (HH:MM AM/PM)" required><br>
+                <input type="text" id="birth-location" placeholder="Birth Location" required><br>
+                <input type="submit" value="Get Horoscope">
+            </form>
+            <div class="chat-box" id="chat-box-horoscope">
+                <!-- Horoscope prediction messages will be displayed here -->
+            </div>
+        </div>
+        <div class="gemini-container">
+            <h1 style="margin-top: 0;">Chat with Gemini AI</h1>
+            <div id="gemini-chat">
+                <div class="chat-box" id="chat-box-gemini">
+                    <!-- Gemini AI chat messages will be displayed here -->
+                </div>
+                <form id="gemini-chat-form">
+                    <input type="text" id="gemini-chat-input" placeholder="Ask a question...">
+                    <input type="submit" value="Send">
+                </form>
+                <!-- Voice input option -->
+                <button id="voice-btn">Voice Input</button>
+                <!-- Feedback box -->
+                <div class="feedback-box">
+                    <h2>Feedback</h2>
+                    <textarea id="feedback" rows="2" placeholder="Write your feedback here..."></textarea><br>
+                    <button id="submit-feedback">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        const horoscopeForm = document.getElementById('horoscope-form');
+        const geminiChatForm = document.getElementById('gemini-chat-form');
+        const chatBoxHoroscope = document.getElementById('chat-box-horoscope');
+        const chatBoxGemini = document.getElementById('chat-box-gemini');
+
+        // Function to append messages
+        function appendMessage(sender, message, chatBox) {
+            const div = document.createElement('div');
+            div.classList.add(sender);
+            div.innerHTML = `<strong>${sender}: </strong>${message}`;
+            chatBox.appendChild(div);
+        }
+
+        // Function to send horoscope request
+        function sendHoroscopeRequest(birthDate, birthTime, birthLocation) {
+            const requestData = {
+                birth_date: birthDate,
+                birth_time: birthTime,
+                birth_location: birthLocation
+            };
+
+            fetch('/horoscope-prediction', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                appendMessage('chatbot', data.prediction, chatBoxHoroscope);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                appendMessage('chatbot', 'Sorry, something went wrong.', chatBoxHoroscope);
+            });
+        }
+
+        // Function to handle Gemini AI chat
+        function handleGeminiChat(message) {
+            appendMessage('you', message, chatBoxGemini);
+            const requestData = {
+                message: message
+            };
+
+            fetch('/gemini-chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.response) {
+                    appendMessage('Gemini AI', data.response, chatBoxGemini);
+                } else {
+                    // Fallback to predefined prompt
+                    const fallbackPrompt = "I'm sorry, I couldn't understand. Could you please rephrase?";
+                    appendMessage('Gemini AI', fallbackPrompt, chatBoxGemini);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                appendMessage('Gemini AI', 'Sorry, something went wrong.', chatBoxGemini);
+            });
+        }
+
+        // Event listener for horoscope form submission
+        horoscopeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const birthDate = document.getElementById('birth-date').value;
+            const birthTime = document.getElementById('birth-time').value;
+            const birthLocation = document.getElementById('birth-location').value;
+
+            // Send the birth details to the server for horoscope prediction
+            sendHoroscopeRequest(birthDate, birthTime, birthLocation);
+        });
+
+        // Event listener for Gemini AI chat form submission
+        geminiChatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = document.getElementById('gemini-chat-input').value.trim();
+            if (message) {
+                handleGeminiChat(message);
+                document.getElementById('gemini-chat-input').value = ''; // Clear input field after sending
+            }
+        });
+
+        // Voice input function
+        document.getElementById('voice-btn').addEventListener('click', () => {
+            // Create a new instance of SpeechRecognition
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition || window.mozSpeechRecognition || window.msSpeechRecognition)();
+
+            // Set properties for speech recognition
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.onresult = function(event) {
+                const voiceInput = event.results[0][0].transcript;
+                document.getElementById('gemini-chat-input').value = voiceInput;
+                handleGeminiChat(voiceInput);
+            };
+
+            // Start speech recognition
+            recognition.start();
+        });
+
+        // Event listener for submitting feedback
+        document.getElementById('submit-feedback').addEventListener('click', () => {
+            const feedback = document.getElementById('feedback').value.trim();
+            if (feedback) {
+                // Send feedback to server (you can implement this part)
+                console.log('Feedback:', feedback);
+                alert('Thank you for your feedback!');
+                document.getElementById('feedback').value = ''; // Clear feedback textarea
+            } else {
+                alert('Please provide your feedback before submitting.');
+            }
+        });
+    </script>
+</body>
+</html>
